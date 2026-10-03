@@ -1,0 +1,44 @@
+import axios from 'axios';
+import { storage } from '../utils/storage';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  timeout: 15000
+});
+
+// Request interceptor to attach JWT token
+api.interceptors.request.use(
+  (config) => {
+    const token = storage.getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor to handle authorization errors cleanly
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Avoid redirect loops if request was to login or me during initialization
+      const isAuthEndpoint = error.config.url?.includes('/api/auth/login');
+      if (!isAuthEndpoint) {
+        storage.clearAuth();
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;
