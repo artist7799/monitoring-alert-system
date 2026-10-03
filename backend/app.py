@@ -101,9 +101,11 @@ def create_app(config_class=Config, config_override=None):
     return app
 
 if __name__ == "__main__":
+    import os
     app = create_app()
     with app.app_context():
         from database.seed import seed_database
         db.create_all()
         seed_database()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    port = int(os.getenv("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
